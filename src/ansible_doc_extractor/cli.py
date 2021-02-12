@@ -14,6 +14,8 @@ from jinja2.runtime import Undefined
 
 import yaml
 
+from ansible_doc_extractor import table_builder
+
 
 # The rst_ify filter has been shamelessly stolen from the Ansible helpers in
 # hacking subfolder. So all of the credit goes to the Ansible authors.
@@ -53,15 +55,7 @@ def convert_descriptions(data):
             convert_descriptions(definition["suboptions"])
         if "contains" in definition:
             convert_descriptions(definition["contains"])
-
-def build_table(data):
-    # TODO: Iterate over objects and find the max char length for each column O(n)
-    # column_break = ""
-    # for curr_item in column_items:
-    #    spaces = (max_column(len(items)) - len(curr_item)) / 2
-    #    column_break += "+" + "-" * spaces*2 + "+"
-    #    row = "|" + " " * spaces + curr_item + " " * spaces + "|"
-    pass
+  
 
 def render_module_docs(output_folder, module, template):
     print("Rendering {}".format(module))
@@ -93,7 +87,7 @@ def render_module_docs(output_folder, module, template):
 
     rst_path = os.path.join(output_folder, name + ".rst")
     with open(rst_path, "w") as fd:
-        fd.write(template.render(doc))
+        fd.write(template.render(doc, build_table=table_builder.build_table))
 
 
 def get_template(custom_template):
