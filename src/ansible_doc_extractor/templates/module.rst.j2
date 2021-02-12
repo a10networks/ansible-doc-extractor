@@ -68,7 +68,10 @@ Parameters
 | body row 4             |            | - body elements.    |
 +------------------------+------------+---------------------+
 
-{{ build_table(options) }}
+{% for row in build_table(options) -%}
+{{ row }}
+{% endfor %}
+
 {# { option_desc(options, 0) } #}
 {% endif %}
 

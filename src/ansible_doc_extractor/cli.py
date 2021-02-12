@@ -86,7 +86,7 @@ def render_module_docs(output_folder, module, template):
         doc["module"] = name
 
     rst_path = os.path.join(output_folder, name + ".rst")
-    with open(rst_path, "w") as fd:
+    with open(rst_path, "w", encoding="utf-8") as fd:
         fd.write(template.render(doc, build_table=table_builder.build_table))
 
 

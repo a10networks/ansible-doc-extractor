@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: ansible-doc-extractor
-Version: 0.1.7.dev2+g35b4912.d20210212
+Version: 0.1.7.dev3+gdcfc29c.d20210212
 Summary: Extract Ansible module documentation
 Home-page: UNKNOWN
 Author: XLAB Steampunk
