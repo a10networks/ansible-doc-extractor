@@ -14,7 +14,8 @@
 
 import enum
 
-CELL_TYPE = enum.Enum('CELL_TYPE', 'PARAM CHO_DEF COMMENT')
+CELL_TYPE = enum.Enum('CELL_TYPE', 'INDENT PARAM CHO_DEF COMMENT')
+
 
 class IncorrectCellTypeException(Exception):
 
@@ -33,13 +34,37 @@ class ListNode(object):
 class RowNode(ListNode):
     cells = []
 
+    def __str__(self, max_param_len, max_cho_def_len, max_comment_len):
+        row_str = "|"
+        indent_cnt = len(cells) - 3 # If we have extra cells then these are for suboption indenting
+        assert indent_cells_cnt >= 0
+        for i in range(indent_cells_cnt):
+            row_str += " {} |".format(cells[i])
+            max_param_len -= 1
+
+        param_pos = indent_cnt
+        cho_def_pos = indent_cnt + 1
+        comment_pos = indent_cnt + 2
+
+        cell_padding = lambda x, y: x + " " * y
+        col1_str = cell_padding(col1, abs(len(param_pos) - max_param_len))
+        col2_str = cell_padding(col2, abs(len(cho_def_pos + 1) - max_default_len))
+        col3_str = cell_padding(col3, abs(len(comment_pos + 2) - max_comment_len))
+
+        row_str += " {} | {} | {} |".format(col1_str, col2_str, col3_str)
+        return row_str
+
 
 class RowSpacerNode(ListNode):
     
-    def __init__(self, spacer_char, cell_cnt=0, next_node=None, prev_node=None):
+    def __init__(self, spacer_char, level=0, next_node=None, prev_node=None):
         self.spacer_char = spacer_char
-        self.cell_cnt = cell_cnt
+        self.level = level
         super().__init__(next_node, prev_node)
+
+    def __str__(self):
+        fill = lambda x, y: x*y
+        
 
 
 class Cell(object):
@@ -51,6 +76,9 @@ class Cell(object):
             raise IncorrectCellTypeException(cell_type)
         self.cell_type = cell_type
 
+    def __str__():
+        return str(self.content)
+
 
 class Table(object):
 
@@ -58,15 +86,19 @@ class Table(object):
         self.max_param_len = 0
         self.max_cho_def_len = 0
         self.max_comment_len = 0
+        self.max_level = 0
         self.head_node = None
         self.tail_node = None
 
-    def _build_row_cells(self, param, data):
+    def _build_row_cells(self, param, data, level):
+
         cells = []
-        
-        if len(param) > self.max_param_len:
-            self.max_param_len = len(param)
-            cells.append(Cell(param, CELL_TYPE.PARAM))
+        for i in level:
+            cells.append(Cell(" "), CELL_TYPE.INDENT)
+        param_len = len(param) + level
+        if param_len > self.max_param_len:
+            self.max_param_len = param_len
+        cells.append(Cell(param, CELL_TYPE.PARAM))
 
         description = ""
         if data.get("description"):
@@ -88,37 +120,57 @@ class Table(object):
     def _build_row_str(self):
         pass
 
+    def _add_spacer(future_node, level=0):
+        row_spacer = RowSpacerNode("-", level)
+        future_node.next_node = row_spacer
+        row_spacer.prev_node = future_node
+
+        # Update level of upper spacer to allow for column creation
+        upper_spacer = row_spacer.prev_node.prev_node
+        assert type(upper_spacer) == type(row_spacer)
+        level_delta = row_spacer.level - upper_spacer.level
+        if level_delta > 0:
+            upper_spacer += level_delta
+        return row_spacer
+
     def _build_row_dll(self, head_node, data, level=0):
+        if level > self.max_level:
+            self.max_level = level
         future_node = RowNode()
         head_node.next_node = future_node
         future_node.prev_node = head_node
 
-        for k, v in data.items():
-            future_node.cells = self._build_row_cells(k, v)
-            if v.get('suboptions'):
-                tail_node = self._build_row_dll(future_node, v['suboptions'], level+1)
-                #TODO: Add spacer
-                #spacer = RowSpacerNode("=", 0)
-                future_node = RowNode()
-                tail_node.next_node = future_node
-                future_node.prev_node = tail_node
-            else:
-                #TODO: Add spacer
-                #spacer = RowSpacerNode("=", 0)
+        options = data.keys()
+        future_node.cells, future_node.indent_cells = self._build_row_cells(
+            options[0], data[options[0]], level)
+        row_spacer = self._add_spacer(future_node, level)
 
-                temp_node = future_node
-                future_node = RowNode()
-                temp_node.next_node = future_node
-                future_node.prev_node = temp_node
-            future_node.next_node = None # Ensure that no next is set if at the end
-        return future_node
+        tail_node = None
+        for i in range(1, options):
+            param = options[i]
+            param_val_dict = data[options[i]]
+            tail_node = None # Overwrite tail_node if it wasn't the last
+
+            future_node = RowNode()
+            future_node.prev_node = row_spacer
+            row_spacer.next_node = future_node
+            future_node.cells, future_node.indent_cells = self._build_row_cells(
+                param, param_val_dict, level)
+            row_spacer = self._add_spacer(future_node)
+
+            if param_val_dict.get('suboptions'):
+                tail_node = self._build_row_dll(row_spacer, param_val_dict['suboptions'], level+1)
+
+        if tail_node:
+            return tail_node
+        return row_spacer
 
     def build_table(self, data):
-        header_spacer = RowSpacerNode("=", 3)
+        header_spacer = RowSpacerNode("-", 3)
         self.head_node = RowNode()
         self.head_node.prev_node = header_spacer
         header_spacer.next_node = self.head_node
-        row_spacer = RowSpacerNode('-', 3)
+        row_spacer = RowSpacerNode('=', 3)
         row_spacer.prev_node = self.head_node
         self.head_node.next_node = row_spacer
         # TODO: self.head_node.cells = 
