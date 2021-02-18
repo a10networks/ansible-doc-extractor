@@ -109,7 +109,7 @@ class Table(object):
         cells = []
         for i in range(level):
             cells.append(Cell(" ", CELL_TYPE.INDENT))
-        param_len = len(param) + level
+        param_len = len(param) + level*4 # |---| is 5 char, but first | is expected. So only need 4 extra char per level
         if param_len > self.max_param_len:
             self.max_param_len = param_len
         cells.append(Cell(param, CELL_TYPE.PARAM))
@@ -168,7 +168,7 @@ class Table(object):
             future_node.prev_node = row_spacer
             row_spacer.next_node = future_node
             future_node.cells = self._build_row_cells( param, param_val_dict, level)
-            row_spacer = self._add_spacer(future_node)
+            row_spacer = self._add_spacer(future_node, level)
 
             if param_val_dict.get('suboptions'):
                 tail_node = self._build_row_dll(row_spacer, param_val_dict['suboptions'], level+1)
