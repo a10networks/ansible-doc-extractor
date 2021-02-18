@@ -106,6 +106,25 @@ class Table(object):
         self.head_node = None
         self.tail_node = None
 
+
+    def _add_type_row(self, future_node, data_type, indent_cells=[]):
+        blank_node = RowNode()
+        blank_node.cells.extend(indent_cells)
+        blank_node.cells.extend([Cell(" ", CELL_TYPE.PARAM),
+                                Cell(" ", CELL_TYPE.CHO_DEF),
+                                Cell(" ", CELL_TYPE.COMMENT)])
+        future_node.next_node = blank_node
+        blank_node.prev_node = future_node   
+
+        type_node = RowNode()
+        type_node.cells.extend(indent_cells)
+        type_node.cells.extend([Cell(data_type, CELL_TYPE.PARAM),
+                                Cell(" ", CELL_TYPE.CHO_DEF),
+                                Cell(" ", CELL_TYPE.COMMENT)])
+        blank_node.next_node = type_node
+        type_node.prev_node = blank_node
+        return type_node
+
     def _build_row(self, future_node, param, data, level):
 
         # Create list of indent cells
@@ -135,18 +154,11 @@ class Table(object):
         future_node.cells.append(Cell(description, CELL_TYPE.COMMENT))
 
         # Add extra RowNode for required tag
-        if data.get("required") == True:
-            required_node = RowNode()
-            required_node.cells = indent_cells
-            required_node.cells.append(Cell("required", CELL_TYPE.PARAM))
-            required_node.cells.append(Cell(" ", CELL_TYPE.CHO_DEF))
-            required_node.cells.append(Cell(" ", CELL_TYPE.COMMENT))
+        data_type = str(data.get("type", ""))
+        if data.get("required"):
+            data_type += "/required"
 
-            future_node.next_node = required_node
-            required_node.prev_node = future_node
-            future_node = required_node
-
-        return future_node
+        return self._add_type_row(future_node, data_type, indent_cells)
 
     def _add_spacer(self, future_node, level=0):
         row_spacer = RowSpacerNode("-", level)
@@ -154,9 +166,8 @@ class Table(object):
         row_spacer.prev_node = future_node
 
         # Update level of upper spacer to allow for column creation
-        upper_spacer = row_spacer.prev_node.prev_node
-        if type(upper_spacer) != type(row_spacer):
-            upper_spacer = upper_spacer.prev_node
+        upper_spacer = row_spacer.prev_node.prev_node.prev_node.prev_node
+        assert type(upper_spacer) == type(row_spacer)
 
         level_delta = row_spacer.level - upper_spacer.level
         if level_delta > 0:
@@ -215,6 +226,7 @@ class Table(object):
             self._build_row_dll(head_spacer, data)
 
         table = []
+        import pdb; pdb.set_trace()
         while head_node != None:
             table.append(head_node.__str__(self.max_param_len, self.max_cho_def_len, self.max_comment_len))
             head_node = head_node.next_node
