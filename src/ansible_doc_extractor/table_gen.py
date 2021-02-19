@@ -226,7 +226,6 @@ class Table(object):
             self._build_row_dll(head_spacer, data)
 
         table = []
-        import pdb; pdb.set_trace()
         while head_node != None:
             table.append(head_node.__str__(self.max_param_len, self.max_cho_def_len, self.max_comment_len))
             head_node = head_node.next_node
